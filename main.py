@@ -14,4 +14,5 @@ if __name__ == '__main__':
     print_hi('Hello!!')
 
 print('Степан Сергеев')
+print("Солопенко Виктория")
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
