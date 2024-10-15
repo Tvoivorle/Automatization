@@ -42,23 +42,7 @@ def filterStatus(filtered_data, columns):
         print(f"Ошибка: Столбец '{status_column}' не найден. Доступные столбцы: {list(columns)}")
         return None
 
-# Проверяем и выводим информацию об отфильтрованных данных
-if filtered_data is not None:
-    status_filtered_data = filterStatus(filtered_data, columns)
-
-    # Проверяем и выводим информацию об отфильтрованных данных
-    if status_filtered_data is not None and not status_filtered_data.empty:
-        num_values = status_filtered_data.size  # Общее количество значений
-        num_rows, num_cols = status_filtered_data.shape  # Количество строк и столбцов
-
-        print(f"Общее количество значений в отфильтрованной таблице: {num_values}")
-        print(f"Количество строк: {num_rows}, Количество столбцов: {num_cols}")
-        print("Отфильтрованные данные по статусам:")
-        print(status_filtered_data)
-    else:
-        print("Нет данных по указанным фильтрам.")
-else:
-    print("Фильтрация по Московской ЖД не выполнена.")
+status_filtered_data = filterStatus(filtered_data, columns)
 
 # Фильтрация по дате окончания
 # Класс для фильтрации по дате окончания
@@ -89,20 +73,47 @@ class DateFilter:
             print(f"Ошибка: Столбец '{date_column}' не найден. Доступные столбцы: {list(data.columns)}")
             return None
 
-
 # Применение фильтрации по дате окончания
 date_filter = DateFilter(stage='первый этап')
 date_column = 'Дата окончания доступа к ИС'  # Предполагаем, что у нас есть этот столбец
 filtered_by_date = date_filter.filter_by_date(status_filtered_data, date_column)
 
-# Проверка и вывод итоговых данных
-if filtered_by_date is not None and not filtered_by_date.empty:
-    num_values = filtered_by_date.size  # Общее количество значений
-    num_rows, num_cols = filtered_by_date.shape  # Количество строк и столбцов
+# Функция для очистки данных по иерархии подразделения
+def cleanHierarchy(data, column_name, filial_list):
+    if column_name in data.columns:
+        # Очистка данных по наименованию функционального филиала
+        cleaned_data = data.copy()
+        cleaned_data[column_name] = cleaned_data[column_name].apply(
+            lambda x: next((filial for filial in filial_list if filial in x), x))
+        return cleaned_data
+    else:
+        print(f"Ошибка: Столбец '{column_name}' не найден.")
+        return None
 
-    print(f"Общее количество значений в таблице после фильтрации по дате окончания: {num_values}")
+# Загрузка данных о функциональных филиалах
+filial_df = pd.read_excel('C://МДТ//Функциональные филиалы.xlsx', sheet_name='Общая')
+filial_list = filial_df['Наименование функционального филиала'].tolist()
+
+# Очистка столбца "Иерархия подразделения"
+if filtered_by_date is not None:
+    filial_data = cleanHierarchy(filtered_by_date, 'Иерархия подразделения', filial_list)
+
+    if filial_data is not None:
+        # Сохранение результата в новый Excel файл
+        filial_data.to_excel('C://МДТ//АСОЗ ЦТ 2025 1 этап_отфильтрованный.xlsx', index=False)
+        print("\nФайл успешно сохранен.")
+else:
+    print("Данные после фильтрации отсутствуют.")
+
+
+# Проверка и вывод итоговых данных
+if filial_data is not None and not filial_data.empty:
+    num_values = filial_data.size  # Общее количество значений
+    num_rows, num_cols = filial_data.shape  # Количество строк и столбцов
+
+    print(f"\nОбщее количество значений в таблице после фильтрации по дате окончания: {num_values}")
     print(f"Количество строк: {num_rows}, Количество столбцов: {num_cols}")
     print("Данные после фильтрации по дате окончания:")
-    print(filtered_by_date)
+    print(filial_data)
 else:
     print("Нет данных по указанным фильтрам по дате окончания.")
