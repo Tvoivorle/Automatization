@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 def openFile(path_file=None):
     excel_file = 'C://МДТ//АСОЗ ЦТ 2025 1 этап.xlsx'
     df = pd.read_excel(excel_file)
@@ -58,3 +59,50 @@ if filtered_data is not None:
         print("Нет данных по указанным фильтрам.")
 else:
     print("Фильтрация по Московской ЖД не выполнена.")
+
+# Фильтрация по дате окончания
+# Класс для фильтрации по дате окончания
+class DateFilter:
+    def __init__(self, stage):
+        self.stage = stage
+        self.cutoff_date = self.set_cutoff_date()
+
+    def set_cutoff_date(self):
+        # Определяем дату окончания в зависимости от этапа
+        if self.stage == 'первый этап':
+            return datetime(2024, 10, 1)
+        elif self.stage == 'второй этап':
+            return datetime(2024, 1, 1)
+        elif self.stage == 'третий этап':
+            return datetime(2024, 4, 1)
+        elif self.stage == 'четвертый этап':
+            return datetime(2024, 7, 1)
+        else:
+            raise ValueError("Некорректный этап. Используйте один из: 'первый этап', 'второй этап', 'третий этап', 'четвертый этап'.")
+
+    def filter_by_date(self, data, date_column):
+        if date_column in data.columns:
+            # Фильтрация данных по дате
+            filtered_data = data[data[date_column] >= self.cutoff_date]
+            return filtered_data
+        else:
+            print(f"Ошибка: Столбец '{date_column}' не найден. Доступные столбцы: {list(data.columns)}")
+            return None
+
+
+# Применение фильтрации по дате окончания
+date_filter = DateFilter(stage='первый этап')
+date_column = 'Дата окончания доступа к ИС'  # Предполагаем, что у нас есть этот столбец
+filtered_by_date = date_filter.filter_by_date(status_filtered_data, date_column)
+
+# Проверка и вывод итоговых данных
+if filtered_by_date is not None and not filtered_by_date.empty:
+    num_values = filtered_by_date.size  # Общее количество значений
+    num_rows, num_cols = filtered_by_date.shape  # Количество строк и столбцов
+
+    print(f"Общее количество значений в таблице после фильтрации по дате окончания: {num_values}")
+    print(f"Количество строк: {num_rows}, Количество столбцов: {num_cols}")
+    print("Данные после фильтрации по дате окончания:")
+    print(filtered_by_date)
+else:
+    print("Нет данных по указанным фильтрам по дате окончания.")
