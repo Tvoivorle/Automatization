@@ -117,3 +117,43 @@ if filial_data is not None and not filial_data.empty:
     print(filial_data)
 else:
     print("Нет данных по указанным фильтрам по дате окончания.")
+
+
+def filter_services(data, columns):
+    services_column = 'Услуга'
+    hierarchy_column = 'Иерархия АРМ/ИС'
+
+    if services_column in columns and hierarchy_column in columns:
+        # Условия для иерархии
+        contains_internet = data[hierarchy_column].str.contains('Интернет|Internet', na=False)
+        is_it_services = (data[hierarchy_column].eq('Стандартные ИТ-сервисы'))
+
+        # Условия для пустых услуг
+        empty_service_condition = data[services_column].isna()
+        empty_services_hierarchy_condition = (
+                    data[hierarchy_column].isin(['АРМ Селекторные совещания', 'МежМашДиалог']) |
+                    (contains_internet & ~is_it_services))
+
+        # Условия для непустых услуг
+        non_empty_service_condition = ~data[services_column].isna() & (
+            ~data[services_column].astype(str).str.startswith('00.'))
+
+        # Объединяем условия
+        filtered_services = data[(empty_service_condition & empty_services_hierarchy_condition) |
+                                 (non_empty_service_condition)]
+
+        return filtered_services
+    else:
+        print(f"Ошибка: Одна или несколько колонок не найдены. Доступные столбцы: {list(columns)}")
+        return None
+
+# Применение фильтрации по услугам к уже отфильтрованным данным
+filtered_services = filter_services(filial_data, columns)
+
+# Сохранение отфильтрованных данных в Excel
+output_file_path = 'C://МДТ//filtered_services.xlsx'  # Укажите нужный путь и имя файла
+filtered_services.to_excel(output_file_path, index=False)
+
+# Вывод результата фильтрации
+print(f"Отфильтрованные данные сохранены в {output_file_path}")
+print(filtered_services)
