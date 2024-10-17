@@ -43,7 +43,7 @@ def main():
 
         print("Сводная таблица успешно создана и сохранена.")
     except Exception as e:
-        print(f"Произошла ошибка: {e}")
+        print(f"Произошла ошибка!: {e}")
 
 if __name__ == '__main__':
     main()
