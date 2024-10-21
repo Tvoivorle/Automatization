@@ -1,7 +1,9 @@
+import re
+
 import pandas as pd
 from datetime import datetime
 def openFile(path_file=None):
-    excel_file = 'C://МДТ//АСОЗ ЦТ 2025 1 этап.xlsx'
+    excel_file = 'C://МДТ//АСОЗ ЦДИ (утвержденные и на согласовании) 2025 1 этап.xlsx'
     df = pd.read_excel(excel_file)
     return df, df.columns
 
@@ -126,7 +128,7 @@ def filter_services(data, columns):
     if services_column in columns and hierarchy_column in columns:
         # Условия для иерархии
         contains_internet = data[hierarchy_column].str.contains('Интернет|Internet', na=False)
-        is_it_services = data[hierarchy_column].eq('Стандартные ИТ-сервисы')
+        is_it_services = data[hierarchy_column].eq('Стандартные ИТ-сервисы->')
 
         # Условия для пустых услуг
         empty_service_condition = data[services_column].isna()
@@ -136,9 +138,9 @@ def filter_services(data, columns):
         )
 
         # Подстановка значений в пустые услуги на основе условий
-        data.loc[empty_service_condition & empty_services_hierarchy_condition & data[hierarchy_column].eq('АРМ Селекторные совещания'), services_column] = '10.02'
-        data.loc[empty_service_condition & empty_services_hierarchy_condition & data[hierarchy_column].eq('МежМашДиалог'), services_column] = '9.06'
-        data.loc[empty_service_condition & contains_internet & ~is_it_services, services_column] = '83.22'
+        data.loc[empty_service_condition & empty_services_hierarchy_condition & data[hierarchy_column].eq('АРМ Селекторные совещания'), services_column] = '02.11 АРМ Селекторные совещания'
+        data.loc[empty_service_condition & empty_services_hierarchy_condition & data[hierarchy_column].eq('МежМашДиалог'), services_column] = '03.01 МежМашДиалог'
+        data.loc[empty_service_condition & contains_internet & ~is_it_services, services_column] = '10.06'
 
         # Условия для непустых услуг
         non_empty_service_condition = ~data[services_column].isna() & (
@@ -165,3 +167,51 @@ filtered_services.to_excel(output_file_path, index=False)
 # Вывод результата фильтрации
 print(f"Отфильтрованные данные сохранены в {output_file_path}")
 print(filtered_services)
+
+def removeDuplicates(data, employee_col, service_col, date_col):
+    if employee_col in data.columns and service_col in data.columns and date_col in data.columns:
+        # Сортируем данные по "Дате создания" (вначале более новые даты)
+        data_sorted = data.sort_values(by=[employee_col, service_col, date_col], ascending=[True, True, False])
+
+        # Удаляем дубликаты по столбцам "Сотрудник" и "Услуга", оставляя только последнюю запись по "Дате создания"
+        data_unique = data_sorted.drop_duplicates(subset=[employee_col, service_col], keep='first')
+
+        return data_unique
+    else:
+        print(f"Ошибка: Один или несколько столбцов не найдены: '{employee_col}', '{service_col}', '{date_col}'.")
+        return None
+
+# Применение функции к вашему отфильтрованному DataFrame
+if filtered_services is not None and not filtered_services.empty:
+    final_data_emp = removeDuplicates(filtered_services, 'Сотрудник', 'Услуга', 'Дата создания')
+
+def addServiceNumber(data, service_col, new_col_name='Номер услуги'):
+    if service_col in data.columns:
+        def extract_service_number(service):
+            if pd.isna(service):
+                return None
+            match = re.match(r'^\d{2}\.\d{2}', str(service))
+            if match:
+                return match.group(0)
+            else:
+                print(f"Не удалось найти номер услуги в: {service}")
+                return None
+
+        data[new_col_name] = data[service_col].apply(extract_service_number)
+        return data
+    else:
+        print(f"Ошибка: Столбец '{service_col}' не найден.")
+        return None
+
+# Применение функции для добавления столбца "Номер услуги"
+if final_data_emp is not None:
+    final_data_emp = addServiceNumber(final_data_emp, 'Услуга')
+
+    # Сохранение отфильтрованных данных в Excel
+    output_file_path = 'C://МДТ//filtered_services_with_service_number.xlsx'
+    final_data_emp.to_excel(output_file_path, index=False)
+
+    print(f"Отфильтрованные данные с номерами услуг сохранены в {output_file_path}")
+    print(final_data_emp)
+else:
+    print("Нет данных для добавления номера услуги.")
